@@ -22,6 +22,8 @@ import cv from "@techstark/opencv-js"
 import * as stringSimilarity from 'string-similarity';
 import {cleanupText, getNameTransform, getRole, parseNumber, tmpImg} from "./util";
 import * as path from "path";
+import config from "../config.json";
+import moment from 'moment-timezone';
 
 console.log('👋 This message is being logged by "renderer.js", included via webpack');
 
@@ -63,36 +65,55 @@ const video = document.querySelector('video');
 const videoCanvas = document.createElement('canvas');
 let stream: MediaStream;
 
+const selfName: string = config?.selfName || '';
+const TIMEZONE: string = config?.timezone || 'Europe/London';
+
+let currentDate: Date = moment().tz(TIMEZONE).toDate();
+
 const DEFAULT_PLAYER: PlayerData = {
+    name: '',
+    role: '',
     primary: '',
     secondary: '',
-    roleColor: {r: 0, g: 0, b: 0},
-    role: '',
-    grouped: false,
-    name: '',
     eliminations: 0,
     assists: 0,
     deaths: 0,
     damage: 0,
     healing: 0,
     mitigated: 0,
-    vacant: false
+    grouped: false,
+    vacant: false,
+    roleColor: {r: 0, g: 0, b: 0}
 };
 const DEFAULT_DATA: GameData = {
     times: {
-        start: new Date(),
-        end: new Date()
+        start: currentDate,
+        end: currentDate
     },
+    notes: '',
     status: 'in_progress',
     self: {
-        name: '',
+        name: selfName,
         hero: '',
         heroes: [],
-        stats: [],
+        role: '',
+        team: '-',
+        topKills: '',
+        topAssists: '',
+        topDeaths: '',
+        topDamage: '',
+        topHealing: '',
+        topMitigation: '',
+        highlightStatsValue1: 0,
+        potg: false,
         player: DEFAULT_PLAYER,
-        role: ''
+        stats: []
     },
     match: {
+        results: {
+            allies: 0,
+            enemies: 0
+        },
         info: '',
         mode: '',
         gamemode: '',
@@ -141,14 +162,14 @@ let session: GlobalSession = {
     accounts: {},
     lastRole: '',
     statesByRole: {
-        "support":[],
-        "tank":[],
-        "dps":[]
+        "Healer":[],
+        "Tank":[],
+        "DPS":[]
     },
     rankByRole:{
-        "support":'',
-        "tank":'',
-        "dps":''
+        "Healer":'',
+        "Tank":'',
+        "DPS":''
     }
 }
 
@@ -171,9 +192,11 @@ function loadData() {
 
 function resetData() {
     console.log("reset!")
+    currentDate = moment().tz(TIMEZONE).toDate();
     data = deepmerge({}, DEFAULT_DATA);
-    data.times.start = new Date();
-    data.times.end = new Date();
+    data.times.start = currentDate;
+    data.times.end = currentDate;
+    updateDataDebug();
 }
 
 
@@ -587,6 +610,43 @@ function updatePreview() {
             }))
     }
 
+    const cvHighlightStatsValue1 = cvResized.roi({
+        x: Coordinates.self.highlightStatsValue1.from[0],
+        y: Coordinates.self.highlightStatsValue1.from[1],
+        width: Coordinates.self.highlightStatsValue1.size[0],
+        height: Coordinates.self.highlightStatsValue1.size[1]
+    });
+    cv.cvtColor(cvHighlightStatsValue1, cvHighlightStatsValue1, cv.COLOR_RGB2GRAY);
+    cv.bitwise_not(cvHighlightStatsValue1, cvHighlightStatsValue1);
+    cv.warpPerspective(cvHighlightStatsValue1, cvHighlightStatsValue1, getNameTransform(), {
+        width: Coordinates.self.highlightStatsValue1.size[0],
+        height: Coordinates.self.highlightStatsValue1.size[1]
+    }, cv.INTER_LINEAR, cv.BORDER_REPLICATE, new cv.Scalar())
+    cv.resize(cvHighlightStatsValue1, cvHighlightStatsValue1, {
+        width: Coordinates.self.highlightStatsValue1.size[0] * 0.7,
+        height: Coordinates.self.highlightStatsValue1.size[1] * 0.7
+    })
+
+    const highlightStatsValue1 = contrast.clone()
+        .crop(Coordinates.self.highlightStatsValue1.from[0], Coordinates.self.highlightStatsValue1.from[1], Coordinates.self.highlightStatsValue1.size[0], Coordinates.self.highlightStatsValue1.size[1])
+        .contrast(0.1)
+        .scale(0.5)
+        .threshold({max: 175, autoGreyscale: false});
+    debugImage('heroName', cvHighlightStatsValue1);
+    if (drawOutlines) {
+        ctx.strokeRect(Coordinates.self.highlightStatsValue1.from[0], Coordinates.self.highlightStatsValue1.from[1],
+            Coordinates.self.highlightStatsValue1.size[0], Coordinates.self.highlightStatsValue1.size[1])
+    }
+    ocrPromises.push(ocr(canvas, cvHighlightStatsValue1, null, 'self-highlight-stats-value-1', 'chars')
+        .then(res => {
+            if (res.confidence > MIN_CONFIDENCE || !data.self.highlightStatsValue1) {
+                data.self.highlightStatsValue1 = parseNumber(res.text);
+            }
+            if (drawLabels) {
+                drawLabel(data.self.highlightStatsValue1, Coordinates.self.highlightStatsValue1)
+            }
+        }))
+
     const cvHero = cvResized.roi({
         x: Coordinates.self.hero.from[0],
         y: Coordinates.self.hero.from[1],
@@ -693,7 +753,7 @@ function updatePreview() {
                     data.match.mode = cleanupText(modeSplit[0]);
                     data.match.map = cleanupText(mapSplit[1]);
                     data.match.gamemode = cleanupText(modeSplit[1])
-                    data.match.competitive = mapSplit[0].toUpperCase().includes("COMPETITIVE");
+                    data.match.competitive = mapSplit[0].toUpperCase().includes("COMPETITIV");
 
                     if (prevMap && prevMap.length > 0 && data.match.map != prevMap) {
                         resetData();
@@ -741,7 +801,7 @@ function updatePreview() {
                     data.match.status.lines = lines;
 
                     switch (data.match.status.type) {
-                        case 'PAYLOAD': {
+                        case 'ESCOLTA': {
                             const timeSplit = lines[0].split(' ');
                             break;
                         }
@@ -774,6 +834,7 @@ function updatePreview() {
                         s = s.trim()
                         if (s.length <= 0) continue
                         const split1 = s.split(":");
+                        if (split1.length <= 1) continue
                         data.performance.parts[split1[0].trim()] = split1[1].trim();
                     }
                 } catch (e) {
@@ -906,7 +967,7 @@ function updatePreview() {
                         data.allies[i].name = cleanupText(res.text);
                     }
 
-                    if (data.allies[i].name.includes('FOR PLAYER')) {
+                    if (data.allies[i].name.includes('JUGADORES')) {
                         data.allies[i].vacant = true;
                     }
 
@@ -1076,7 +1137,7 @@ function updatePreview() {
                         data.enemies[i].name = cleanupText(res.text);
                     }
 
-                    if (data.enemies[i].name.includes('FOR PLAYER')) {
+                    if (data.enemies[i].name.includes('JUGADORES')) {
                         data.enemies[i].vacant = true;
                     }
 
@@ -1260,6 +1321,15 @@ function updatePreview() {
             data.self.player = data.allies.find(d => d.name === bestMatch.bestMatch.target);
             data.self.role = data.self.player.role
             session.lastRole = data.self.role;
+
+            const topStatsDiff = getTopStatsDiff(data);
+            data.self.topKills = topStatsDiff.eliminations.toString();
+            data.self.topAssists = topStatsDiff.assists.toString();
+            data.self.topDeaths = topStatsDiff.deaths.toString();
+            data.self.topDamage = topStatsDiff.damage.toString();
+            data.self.topHealing = topStatsDiff.healing.toString();
+            data.self.topMitigation = topStatsDiff.mitigated.toString();
+            data.self.highlightStatsValue1 = data.self.role === 'Healer' ? data.self.highlightStatsValue1 : 0 // TODO: Add other roles top stats such as Saved Players for Support role
         })
         .then(() => {
 
@@ -1289,23 +1359,84 @@ function updatePreview() {
 
 }
 
+function getTopStatsDiff(data: GameData) {
+    const selfName = data.self.player.name;
+    const selfStats = data.allies.find(player => player.name === selfName);
+
+    /* if (!selfStats) {
+        return "No self stats found.";
+    } */
+
+    const topStats = {
+        eliminations: -1,
+        assists: -1,
+        deaths: Number.MAX_SAFE_INTEGER,
+        damage: -1,
+        healing: -1,
+        mitigated: -1,
+    };
+
+    let leastDeaths = Number.MAX_SAFE_INTEGER; // Track player with least deaths
+
+    // Track stats among all players (allies and enemies)
+    const allPlayers = [...data.allies, ...data.enemies];
+    allPlayers.forEach(player => {
+        if (player.name !== selfName) {
+            if (player.eliminations > topStats.eliminations) {
+                topStats.eliminations = player.eliminations;
+            }
+            if (player.assists > topStats.assists) {
+                topStats.assists = player.assists;
+            }
+            if (player.deaths < topStats.deaths) {
+                topStats.deaths = player.deaths;
+            }
+            if (player.damage > topStats.damage) {
+                topStats.damage = player.damage;
+            }
+            if (player.healing > topStats.healing) {
+                topStats.healing = player.healing;
+            }
+            if (player.mitigated > topStats.mitigated) {
+                topStats.mitigated = player.mitigated;
+            }
+
+            if (player.deaths < leastDeaths) {
+                leastDeaths = player.deaths;
+            }
+        }
+    });
+
+    const topStatsDiff = {
+        eliminations: selfStats.eliminations - topStats.eliminations,
+        assists: selfStats.assists - topStats.assists,
+        deaths: selfStats.deaths - leastDeaths,
+        damage: selfStats.damage - topStats.damage,
+        healing: selfStats.healing - topStats.healing,
+        mitigated: selfStats.mitigated - topStats.mitigated,
+    };
+
+    return topStatsDiff;
+}
+
 function saveSession() {
     JsonOutput.backup(path.join(getDataDir(), "session.json"))
     JsonOutput.writeJson(path.join(getDataDir(), "session.json"), session);
 }
 
-function writeOutputAndReset() {
-    data.times.end = new Date();
+async function writeOutput() {
+    currentDate = moment().tz(TIMEZONE).toDate();
+    //data.times.end = currentDate;
     JsonOutput.backup(path.join(getDataDir(), "currentgame.json"))
     JsonOutput.writeJson(path.join(getDataDir(), "currentgame.json"), data);
     try {
         if (data.status !== 'reset' && data.status !== 'in_progress') {
-            session.states.push(data.status);
+            session.states?.push(data.status);
             if (session.accounts && (session.lastAccount in session.accounts)) {
                 //TODO: group by role
                 session.accounts[session.lastAccount].states.push(data.status);
                 if (session.lastRole) {
-                    session.accounts[session.lastAccount].statesByRole[session.lastRole].push(data.status);
+                    session.accounts[session.lastAccount].statesByRole[session.lastRole]?.push(data.status);
                 }
             }
             saveSession();
@@ -1313,18 +1444,69 @@ function writeOutputAndReset() {
     } catch (e) {
         console.log(e);
     }
-    for (const out of outputs) {
-        try {
-            out.writeGameResult(data);
-        } catch (e) {
-            console.log(e);
-        }
-        try {
-            out.writeImage(data, images.get('resized'), canvas.toDataURL('image/png'))
-        } catch (e) {
-            console.log(e);
+
+    if (data.status !== 'reset') {
+        for (const out of outputs) {
+            try {
+                if (out instanceof GoogleSheetsOutput) {
+                    await out.initialize();
+                }
+                out.writeGameResult(data);
+            } catch (e) {
+                console.log(e);
+            }
+            try {
+                out.writeImage(data, images.get('resized'), canvas.toDataURL('image/png'))
+            } catch (e) {
+                console.log(e);
+            }
         }
     }
+    
+    setTimeout(() => {
+        updateDataDebug();
+    }, 200);
+}
+
+async function writeOutputAndReset() {
+    currentDate = moment().tz(TIMEZONE).toDate();
+    //data.times.end = currentDate;
+    JsonOutput.backup(path.join(getDataDir(), "currentgame.json"))
+    JsonOutput.writeJson(path.join(getDataDir(), "currentgame.json"), data);
+    try {
+        if (data.status !== 'reset' && data.status !== 'in_progress') {
+            session.states?.push(data.status);
+            if (session.accounts && (session.lastAccount in session.accounts)) {
+                //TODO: group by role
+                session.accounts[session.lastAccount].states.push(data.status);
+                if (session.lastRole) {
+                    session.accounts[session.lastAccount].statesByRole[session.lastRole]?.push(data.status);
+                }
+            }
+            saveSession();
+        }
+    } catch (e) {
+        console.log(e);
+    }
+
+    if (data.status !== 'reset') {
+        for (const out of outputs) {
+            try {
+                if (out instanceof GoogleSheetsOutput) {
+                    await out.initialize();
+                }
+                out.writeGameResult(data);
+            } catch (e) {
+                console.log(e);
+            }
+            try {
+                out.writeImage(data, images.get('resized'), canvas.toDataURL('image/png'))
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    }
+    
     setTimeout(() => {
         updateDataDebug();
     }, 200);
@@ -1448,17 +1630,76 @@ async function debugImage(id: string, jmp: Jimp | cv.Mat) {
 //     document.getElementById('screenshotPreview').src = sourceId
 // });
 
-let tabDown = false;
-ipcRenderer.on('tabKey', (event, action) => {
-    console.log(`[tab] ${action}`)
-    tabDown = action;
+// let keyDown = false;
+ipcRenderer.on('getScreenshot', (event, action) => {
+    console.log(`[getScreenshot] ${action}`)
+    // keyDown = action;
+    currentDate = moment().tz(TIMEZONE).toDate();
+    data.times.end = currentDate;
 
-    setTimeout(() => {
-        if (tabDown) {
+    // if (keyDown) {
+        takeScreenshot();
+    // }
+
+    /* setTimeout(() => {
+        if (keyDown) {
             takeScreenshot();
         }
-    }, 500);
+    }, 500); */
 })
+
+ipcRenderer.on('gameResult', (event, action) => {
+    console.log(`[gameResult] ${action}`)
+
+    data.status = action;
+
+    if (action === 'reset') {
+        resetData();
+        return;
+    }
+    
+    writeOutput()
+})
+
+ipcRenderer.on('setPOTG', (event, value) => {
+    console.log(`[setPOTG] ${value}`)
+
+    data.self.potg = value;
+    updateDataDebug();
+})
+
+ipcRenderer.on('setTeam', (event, value) => {
+    console.log(`[setTeam] ${value}`)
+
+    data.self.team = value;
+    updateDataDebug();
+})
+
+ipcRenderer.on('setResultAllies', (event, value) => {
+    console.log(`[setResultAllies] ${value}`)
+
+    data.match.results.allies = value;
+    updateDataDebug();
+})
+
+ipcRenderer.on('setResultEnemies', (event, value) => {
+    console.log(`[setResultEnemies] ${value}`)
+
+    data.match.results.enemies = value;
+    updateDataDebug();
+})
+
+ipcRenderer.on('sendKeyStroke', (event, keycode, character) => {
+    // console.log(`[sendKeyStroke] keyCode: ${ keycode } | character: ${ character }`);
+
+    if (character === undefined) {
+        character = '';
+    }
+
+    keycode === 14 ? data.notes = data.notes.slice(0, -1) : data.notes += character;
+    updateDataDebug();
+})
+
 
 const screenshotStatus = document.getElementById('screenshotStatus');
 ipcRenderer.on('takingScreenshot', e => {

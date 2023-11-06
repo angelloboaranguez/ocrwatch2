@@ -104,7 +104,24 @@ export class Coordinates {
             from: [1195, 410],
             size: [370, 200],
             height: 62
+        },
+        highlightStatsValue1: <Rect> { // Saved Players Value
+            from: [1373, 165],
+            size: [195, 51],
+            height: 51
+        },
+        // TODO:
+        highlightStatsName1: <Rect> { // Saved Players Name
+            from: [1373, 212],
+            size: [195, 26],
+            height: 26
+        },
+        highlightStats2: <Rect> { // Solo kills
+            from: [1373, 248],
+            size: [195, 78],
+            height: 78
         }
+        // END TODO
     }
     static match = {
         wrapper: <Rect>{
@@ -112,7 +129,7 @@ export class Coordinates {
             size: [700, 30]
         },
         time: <Rect>{
-            from: [188, 60],
+            from: [218, 60],
             size: [100, 35]
         },
         status: <Rect>{

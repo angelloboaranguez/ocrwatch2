@@ -55,6 +55,7 @@ export interface GameData {
         start: Date,
         end: Date
     },
+    notes: string,
     status: GameStatus,
     self: {
         name: string,
@@ -62,7 +63,16 @@ export interface GameData {
         heroes: string[],
         stats: SelfStat[],
         player: Partial<PlayerData>,
-        role: string
+        role: string,
+        team: string,
+        topKills: string,
+        topAssists: string,
+        topDeaths: string,
+        topDamage: string,
+        topHealing: string,
+        topMitigation: string,
+        highlightStatsValue1: number,
+        potg: boolean
     },
     match: {
         info: string,
@@ -87,6 +97,10 @@ export interface GameData {
                 time: '',
                 distance: ''
             }
+        }
+        results: {
+            allies: number,
+            enemies: number
         }
     },
     performance: any,

@@ -7,8 +7,9 @@ import * as influx2 from "@influxdata/influxdb-client"
 import config from "../../config.json";
 import {ClientOptions} from "@influxdata/influxdb-client";
 import {GoogleSpreadsheet} from "google-spreadsheet";
-import { format, differenceInMinutes, differenceInSeconds } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { JWT, OAuth2Client } from "google-auth-library";
 
 let appDataPath = '';
 
@@ -115,14 +116,13 @@ export class RowOutput extends Output {
 
     getHeader() {
         return [
-            "Start Date",
-            "End Date",
-            "Day",
-            "Map",
-            "Type",
-            "Team",
-            "Role",
-            "Hero",
+            "Fecha",
+            "Día",
+            "Mapa",
+            "Tipo",
+            "Equipo",
+            "Rol",
+            "Héroe",
             "Win?",
             "Top Kills?",
             "Top Assists?",
@@ -131,52 +131,48 @@ export class RowOutput extends Output {
             "Top Heal?",
             "Top Mit?",
             "POTG?",
-            "Saved", // TODO: Add other roles top stats such as Saved Players for Support role
+            "Saved",
             "E",
             "A",
-            "D",
+            "M",
             "Dmg",
             "Heal",
             "Mit",
             "Result A.",
             "Result E.",
             "Time",
-            "Total Time",
             "Notes"
         ];
     }
 
     makeRow(data: GameData): (string | number | boolean)[] {
-        const totalTime = `${differenceInMinutes(data.times.end, data.times.start).toString()}:${(differenceInSeconds(data.times.end, data.times.start) % 60).toString().padStart(2, '0')}`;
         return [
             format(data.times.start, 'dd/MM/yyyy HH:mm:ss'),
-            format(data.times.end, 'dd/MM/yyyy HH:mm:ss'),
             format(data.times.start, 'EEEE', { locale: es }),
             this.cleanString(data.match.map),
             this.cleanString(data.match.mode),
-            data.self.team,
+            '',
             data.self.role,
             data.self.heroes.map(hero => hero.replace(/[^a-zA-Z0-9]/g, '')).join('/'),
-            data.status === 'win',
+            data.status === 'win' ? 'S' : 'N',
             data.self.topKills,
             data.self.topAssists,
             data.self.topDeaths,
             data.self.topDamage,
             data.self.topHealing,
             data.self.topMitigation,
-            data.self.potg === true,
-            data.self.highlightStatsValue1, // TODO: Add other roles top stats such as Saved Players for Support role
+            '',
+            data.self.savedPlayers,
             data.self.player.eliminations,
             data.self.player.assists,
             data.self.player.deaths,
             data.self.player.damage,
             data.self.player.healing,
             data.self.player.mitigated,
-            data.match.results.allies,
-            data.match.results.enemies,
+            '',
+            '',
             this.cleanString(data.match.time.text),
-            totalTime,
-            data.notes
+            ''
         ];
     }
 
@@ -238,11 +234,28 @@ export class GoogleSheetsOutput extends RowOutput {
 
     async initialize() {
         if (!config.outputs?.gsheets) return;
-        this.sheet = new GoogleSpreadsheet(config.outputs.gsheets.sheet);
+        
+        const SCOPES = [
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive.file',
+        ];
+        
+        const jwt = new JWT({
+            email: config.outputs.gsheets.credentials.client_email,
+            key: config.outputs.gsheets.credentials.private_key,
+            scopes: SCOPES,
+        });
+
+        this.sheet = new GoogleSpreadsheet(config.outputs.gsheets.sheet, jwt);
         /* await this.sheet.useServiceAccountAuth({
             private_key: config.outputs.gsheets.private_key,
             client_email: config.outputs.gsheets.client_email
         }); */
+        /* const oauthClient = new OAuth2Client({
+            clientId: process.env.GOOGLE_OAUTH_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+        }); */
+
         await this.sheet.useServiceAccountAuth(config.outputs.gsheets.credentials);
         await this.sheet.loadInfo(); // Esperar a que se complete la carga de información
     }

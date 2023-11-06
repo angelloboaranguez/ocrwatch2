@@ -22,7 +22,7 @@ export function tmpImg(src: string): Promise<HTMLImageElement> {
 }
 
 export function cleanupText(txt: string) {
-    return txt.replace('\n', '').trim();
+    return txt ? txt.replace('\n', '').trim() : '';
 }
 
 export function parseNumber(txt: string): number {
@@ -92,13 +92,13 @@ export function getRole(jmp: Jimp): string {
     if (isWhite(topLeft) && isWhite(topRight)) { // tank or dps
         if (isWhite(bottomLeft) && isWhite(bottomRight)) {
             // console.log("dps")
-            return 'dps';
+            return 'DPS';
         }
         // console.log("tank")
-        return 'tank';
+        return 'Tank';
     }
     // console.log("support")
-    return 'support';
+    return 'Healer';
 
     // return tankCheck ? 'tank' : supportCheck ? 'support' : dpsCheck ? 'dps' :  'unknown';
 }
