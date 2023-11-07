@@ -35,7 +35,7 @@ export class Coordinates {
             },
             name: <Rect>{
                 from: [410, 614],
-                size: [166, 307]
+                size: [270, 307]
             },
             stats1: <Rect>{
                 from: [688, 614],

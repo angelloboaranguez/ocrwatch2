@@ -197,9 +197,11 @@ const createWindow = async (): Promise<void> => {
         }
         else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.Home) {
             listenAllKeys = true;
+            mainWindow.webContents.send('listenAllKeys', listenAllKeys);
         }
         else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.End) {
             listenAllKeys = false;
+            mainWindow.webContents.send('listenAllKeys', listenAllKeys);
         }
         // Set Allies Result
         else if (e.ctrlKey && e.shiftKey && (e.keycode === UiohookKey[0] || e.keycode === UiohookKey.Numpad0)) {

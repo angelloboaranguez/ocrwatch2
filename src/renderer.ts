@@ -24,6 +24,7 @@ import {cleanupText, getNameTransform, getRole, parseNumber, tmpImg} from "./uti
 import * as path from "path";
 import config from "../config.json";
 import moment from 'moment-timezone';
+import sound from "sound-play";
 
 console.log('👋 This message is being logged by "renderer.js", included via webpack');
 
@@ -45,6 +46,14 @@ setTimeout(() => {
 // setInterval(() => {
 //     takeScreenshot();
 // }, 5000);
+
+const startSound = path.join(__dirname, '../../../../../../src/assets/start.mp3');
+const successSound = path.join(__dirname, '../../../../../../src/assets/success.mp3');
+const notifyUpSound = path.join(__dirname, '../../../../../../src/assets/notifyUp.mp3');
+const notifyDownSound = path.join(__dirname, '../../../../../../src/assets/notifyDown.mp3');
+const keySound = path.join(__dirname, '../../../../../../src/assets/key.mp3');
+const setSound = path.join(__dirname, '../../../../../../src/assets/set.mp3');
+const readySound = path.join(__dirname, '../../../../../../src/assets/ready.wav');
 
 const imageTypes: Set<string> = new Set<string>();
 
@@ -339,6 +348,8 @@ async function takeScreenshot() {
         ocrRunning = false;
         location.reload()
     }
+    
+    sound.play(startSound);
 }
 
 async function takeVideoSnapshot(): Promise<string> {
@@ -361,9 +372,10 @@ async function takeVideoSnapshot(): Promise<string> {
 
 
 ipcRenderer.on('setSource', async (event, sourceId) => {
-    console.log("source", sourceId)
+    console.log("source", sourceId);
 
     createVideo(sourceId);
+    sound.play(startSound);
 });
 
 ipcRenderer.on('takeScreenshot', async (event) => {
@@ -643,7 +655,7 @@ function updatePreview() {
                 data.self.highlightStatsValue1 = parseNumber(res.text);
             }
             if (drawLabels) {
-                drawLabel(data.self.highlightStatsValue1, Coordinates.self.highlightStatsValue1)
+                drawLabel(data.self.highlightStatsValue1.toString(), Coordinates.self.highlightStatsValue1)
             }
         }))
 
@@ -749,7 +761,7 @@ function updatePreview() {
 
                     data.match.info = cleanupText(res.text);
                     const mapSplit = data.match.info.split("|");
-                    const modeSplit = mapSplit[0].split(/[><-]/);
+                    const modeSplit = mapSplit[0].split(/[><:-]/);
                     data.match.mode = cleanupText(modeSplit[0]);
                     data.match.map = cleanupText(mapSplit[1]);
                     data.match.gamemode = cleanupText(modeSplit[1])
@@ -967,7 +979,7 @@ function updatePreview() {
                         data.allies[i].name = cleanupText(res.text);
                     }
 
-                    if (data.allies[i].name.includes('JUGADORES')) {
+                    if (data.allies[i].name.includes('...')) {
                         data.allies[i].vacant = true;
                     }
 
@@ -1137,7 +1149,7 @@ function updatePreview() {
                         data.enemies[i].name = cleanupText(res.text);
                     }
 
-                    if (data.enemies[i].name.includes('JUGADORES')) {
+                    if (data.enemies[i].name.includes('...')) {
                         data.enemies[i].vacant = true;
                     }
 
@@ -1461,6 +1473,7 @@ async function writeOutput() {
                 console.log(e);
             }
         }
+        sound.play(successSound);
     }
     
     setTimeout(() => {
@@ -1632,7 +1645,8 @@ async function debugImage(id: string, jmp: Jimp | cv.Mat) {
 
 // let keyDown = false;
 ipcRenderer.on('getScreenshot', (event, action) => {
-    console.log(`[getScreenshot] ${action}`)
+    console.log(`[getScreenshot] ${action}`);
+    sound.play(setSound);
     // keyDown = action;
     currentDate = moment().tz(TIMEZONE).toDate();
     data.times.end = currentDate;
@@ -1649,44 +1663,57 @@ ipcRenderer.on('getScreenshot', (event, action) => {
 })
 
 ipcRenderer.on('gameResult', (event, action) => {
-    console.log(`[gameResult] ${action}`)
+    console.log(`[gameResult] ${action}`);
 
     data.status = action;
 
     if (action === 'reset') {
         resetData();
+        sound.play(readySound);
+
         return;
     }
-    
-    writeOutput()
+
+    writeOutput();
+    sound.play(setSound);
 })
 
 ipcRenderer.on('setPOTG', (event, value) => {
-    console.log(`[setPOTG] ${value}`)
+    console.log(`[setPOTG] ${value}`);
 
     data.self.potg = value;
     updateDataDebug();
+    sound.play(setSound);
 })
 
 ipcRenderer.on('setTeam', (event, value) => {
-    console.log(`[setTeam] ${value}`)
+    console.log(`[setTeam] ${value}`);
 
     data.self.team = value;
     updateDataDebug();
+    sound.play(setSound);
 })
 
 ipcRenderer.on('setResultAllies', (event, value) => {
-    console.log(`[setResultAllies] ${value}`)
+    console.log(`[setResultAllies] ${value}`);
 
     data.match.results.allies = value;
     updateDataDebug();
+    sound.play(setSound);
 })
 
 ipcRenderer.on('setResultEnemies', (event, value) => {
-    console.log(`[setResultEnemies] ${value}`)
+    console.log(`[setResultEnemies] ${value}`);
 
     data.match.results.enemies = value;
     updateDataDebug();
+    sound.play(setSound);
+})
+
+ipcRenderer.on('listenAllKeys', (event, value) => {
+    console.log(`[listenAllKeys] ${value}`);
+
+    value === true ? sound.play(notifyUpSound) : sound.play(notifyDownSound);
 })
 
 ipcRenderer.on('sendKeyStroke', (event, keycode, character) => {
@@ -1698,6 +1725,7 @@ ipcRenderer.on('sendKeyStroke', (event, keycode, character) => {
 
     keycode === 14 ? data.notes = data.notes.slice(0, -1) : data.notes += character;
     updateDataDebug();
+    sound.play(keySound);
 })
 
 
