@@ -53,7 +53,8 @@ const notifyUpSound = path.join(__dirname, '../../../../../../src/assets/notifyU
 const notifyDownSound = path.join(__dirname, '../../../../../../src/assets/notifyDown.mp3');
 const keySound = path.join(__dirname, '../../../../../../src/assets/key.mp3');
 const setSound = path.join(__dirname, '../../../../../../src/assets/set.mp3');
-const readySound = path.join(__dirname, '../../../../../../src/assets/ready.wav');
+const readySound = path.join(__dirname, '../../../../../../src/assets/ready.mp3');
+const screenshotSound = path.join(__dirname, '../../../../../../src/assets/screenshot.mp3');
 
 const imageTypes: Set<string> = new Set<string>();
 
@@ -348,8 +349,6 @@ async function takeScreenshot() {
         ocrRunning = false;
         location.reload()
     }
-    
-    sound.play(startSound);
 }
 
 async function takeVideoSnapshot(): Promise<string> {
@@ -1358,6 +1357,7 @@ function updatePreview() {
             JsonOutput.writeJson(path.join(getDataDir(),"currentgame.json"), data);
 
             ocrRunning = false
+            sound.play(startSound);
         })
         .catch(e => {
             console.log(e);
@@ -1646,13 +1646,14 @@ async function debugImage(id: string, jmp: Jimp | cv.Mat) {
 // let keyDown = false;
 ipcRenderer.on('getScreenshot', (event, action) => {
     console.log(`[getScreenshot] ${action}`);
-    sound.play(setSound);
+
     // keyDown = action;
     currentDate = moment().tz(TIMEZONE).toDate();
     data.times.end = currentDate;
 
     // if (keyDown) {
         takeScreenshot();
+        sound.play(screenshotSound);
     // }
 
     /* setTimeout(() => {
