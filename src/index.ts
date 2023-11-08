@@ -224,22 +224,22 @@ const createWindow = async (): Promise<void> => {
             mainWindow.webContents.send('setResultAllies', 5);
         }
         // Set Enemies Result
-        else if (e.altKey && (e.keycode === UiohookKey[0] || e.keycode === UiohookKey.Numpad0)) {
+        else if (e.altKey && !e.ctrlKey && (e.keycode === UiohookKey[0] || e.keycode === UiohookKey.Numpad0)) {
             mainWindow.webContents.send('setResultEnemies', 0);
         }
-        else if (e.altKey && (e.keycode === UiohookKey[1] || e.keycode === UiohookKey.Numpad1)) {
+        else if (e.altKey && !e.ctrlKey && (e.keycode === UiohookKey[1] || e.keycode === UiohookKey.Numpad1)) {
             mainWindow.webContents.send('setResultEnemies', 1);
         }
-        else if (e.altKey && (e.keycode === UiohookKey[2] || e.keycode === UiohookKey.Numpad2)) {
+        else if (e.altKey && !e.ctrlKey && (e.keycode === UiohookKey[2] || e.keycode === UiohookKey.Numpad2)) {
             mainWindow.webContents.send('setResultEnemies', 2);
         }
-        else if (e.altKey && (e.keycode === UiohookKey[3] || e.keycode === UiohookKey.Numpad3)) {
+        else if (e.altKey && !e.ctrlKey && (e.keycode === UiohookKey[3] || e.keycode === UiohookKey.Numpad3)) {
             mainWindow.webContents.send('setResultEnemies', 3);
         }
-        else if (e.altKey && (e.keycode === UiohookKey[4] || e.keycode === UiohookKey.Numpad4)) {
+        else if (e.altKey && !e.ctrlKey && (e.keycode === UiohookKey[4] || e.keycode === UiohookKey.Numpad4)) {
             mainWindow.webContents.send('setResultEnemies', 4);
         }
-        else if (e.altKey && (e.keycode === UiohookKey[5] || e.keycode === UiohookKey.Numpad5)) {
+        else if (e.altKey && !e.ctrlKey && (e.keycode === UiohookKey[5] || e.keycode === UiohookKey.Numpad5)) {
             mainWindow.webContents.send('setResultEnemies', 5);
         }
 
