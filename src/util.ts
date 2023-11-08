@@ -3,6 +3,7 @@ import cv from "@techstark/opencv-js";
 // @ts-ignore
 import Jimp from "jimp/es";
 import RGBA = tinycolor.ColorFormats.RGBA;
+import { format } from 'date-fns';
 
 export function tmpImg(src: string): Promise<HTMLImageElement> {
     const img = document.createElement('img');
@@ -101,4 +102,18 @@ export function getRole(jmp: Jimp): string {
     return 'Healer';
 
     // return tankCheck ? 'tank' : supportCheck ? 'support' : dpsCheck ? 'dps' :  'unknown';
+}
+
+export class Logger {
+    static info(...args: any) {
+        console.log(`[${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}]`, ...args);
+    }
+
+    static warning(...args: any) {
+        console.warn(`[${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}]`, ...args);
+    }
+
+    static error(...args: any) {
+        console.error(`[${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}]`, ...args);
+    }
 }

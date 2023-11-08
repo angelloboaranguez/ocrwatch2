@@ -20,16 +20,16 @@ import tinycolor from "tinycolor2";
 import RGBA = tinycolor.ColorFormats.RGBA;
 import cv from "@techstark/opencv-js"
 import * as stringSimilarity from 'string-similarity';
-import {cleanupText, getNameTransform, getRole, parseNumber, tmpImg} from "./util";
+import {cleanupText, getNameTransform, getRole, Logger, parseNumber, tmpImg} from "./util";
 import * as path from "path";
 import config from "../config.json";
 import moment from 'moment-timezone';
 import sound from "sound-play";
 
-console.log('👋 This message is being logged by "renderer.js", included via webpack');
+Logger.info('👋 This message is being logged by "renderer.js", included via webpack');
 
 ipcRenderer.on('appDataPath',(event,path)=>{
-    console.log(path);
+    Logger.info(path);
     setAppData(path);
 
     loadData();
@@ -59,7 +59,7 @@ const screenshotSound = path.join(__dirname, '../../../../../../src/assets/scree
 const imageTypes: Set<string> = new Set<string>();
 
 document.getElementById('screenshotBtn').addEventListener('click', e => {
-    console.log("screenshotBtn takeScreenshot")
+    Logger.info("screenshotBtn takeScreenshot")
     takeScreenshot();
 });
 
@@ -69,7 +69,7 @@ imageSelect.addEventListener('change', e => {
     updatePreview();
 });
 
-console.log('👋 This message is being logged by "offscreen.js", included via webpack');
+Logger.info('👋 This message is being logged by "offscreen.js", included via webpack');
 
 const video = document.querySelector('video');
 const videoCanvas = document.createElement('canvas');
@@ -196,12 +196,12 @@ function loadData() {
             updateDataDebug();
         }, 500);
     } catch (e) {
-        console.log(e)
+        Logger.error(e)
     }
 }
 
 function resetData() {
-    console.log("reset!")
+    Logger.info("Reset/Start Game!")
     currentDate = moment().tz(TIMEZONE).toDate();
     data = deepmerge({}, DEFAULT_DATA);
     data.times.start = currentDate;
@@ -279,7 +279,7 @@ function loadSession() {
             updateDataDebug();
         }, 100);
     } catch (e) {
-        console.log(e)
+        Logger.error(e)
         saveSession();
     }
 
@@ -345,7 +345,7 @@ async function takeScreenshot() {
     try {
         await processScreenshot(jmp, imgEl)
     } catch (e) {
-        console.log(e);
+        Logger.error(e);
         ocrRunning = false;
         location.reload()
     }
@@ -371,14 +371,14 @@ async function takeVideoSnapshot(): Promise<string> {
 
 
 ipcRenderer.on('setSource', async (event, sourceId) => {
-    console.log("source", sourceId);
+    Logger.info("[setSource]", sourceId);
 
     createVideo(sourceId);
     sound.play(startSound);
 });
 
 ipcRenderer.on('takeScreenshot', async (event) => {
-    console.log("screenshot");
+    Logger.info("[takeScreenshot]", event);
 
     takeScreenshot();
 })
@@ -395,7 +395,7 @@ async function processScreenshot(jmp: Jimp, img: HTMLElement) {
     try {
         cvImg = cv.imread(img)
     } catch (e) {
-        console.log(e);
+        Logger.error(e);
         location.reload()
     }
 
@@ -418,7 +418,7 @@ async function processScreenshot(jmp: Jimp, img: HTMLElement) {
     try {
         cv.resize(cvImg, cvResized, {width: Coordinates.screen.width, height: Coordinates.screen.height});
     } catch (e) {
-        console.log(e);
+        Logger.error(e);
         location.reload()
     }
     handleImageContent('resized', resized, cvResized)
@@ -430,7 +430,7 @@ async function processScreenshot(jmp: Jimp, img: HTMLElement) {
     try {
         cv.cvtColor(cvResized, cvGrayscale, cv.COLOR_RGB2GRAY);
     } catch (e) {
-        console.log(e);
+        Logger.error(e);
         location.reload()
     }
     handleImageContent('grayscale', grayscale, cvGrayscale);
@@ -442,7 +442,7 @@ async function processScreenshot(jmp: Jimp, img: HTMLElement) {
     try {
         cv.bitwise_not(cvGrayscale, cvInverted);
     } catch (e) {
-        console.log(e);
+        Logger.error(e);
         location.reload()
     }
     handleImageContent('inverted', inverted, cvInverted);
@@ -455,7 +455,7 @@ async function processScreenshot(jmp: Jimp, img: HTMLElement) {
         // https://stackoverflow.com/questions/39308030/how-do-i-increase-the-contrast-of-an-image-in-python-opencv
         cv.addWeighted(cvInverted, 1.1, cvInverted, 0, 1, cvContrast);
     } catch (e) {
-        console.log(e);
+        Logger.error(e);
         location.reload()
     }
     handleImageContent('contrast', contrast, cvContrast);
@@ -483,7 +483,7 @@ async function processScreenshot(jmp: Jimp, img: HTMLElement) {
         try {
             updatePreview();
         } catch (e) {
-            console.log(e);
+            Logger.error(e);
             ocrRunning = false;
             location.reload()
         }
@@ -598,7 +598,7 @@ function updatePreview() {
                         drawLabel(data.self.name, Coordinates.self.name);
                     }
                 } catch (e) {
-                    console.log(e);
+                    Logger.error(e);
                 }
                 try {
                     session.lastAccount = data.self.name;
@@ -616,7 +616,7 @@ function updatePreview() {
 
                     restoreSession(data.self.name);
                 } catch (e) {
-                    console.log(e);
+                    Logger.error(e);
                 }
             }))
     }
@@ -724,7 +724,7 @@ function updatePreview() {
                             data.self.stats[i].text = res.text;
                             // const split = res.text.split(/([\do:]+)([%]?)(.*)/);
                             const split = res.text.split('\n');
-                            console.log(split);
+                            Logger.info(split);
                             let split0 = split[0];
                             let unit = '';
                             if (split0.endsWith('%')) {
@@ -735,7 +735,7 @@ function updatePreview() {
                             data.self.stats[i].unit = unit;
                             data.self.stats[i].title = cleanupText(split[1].replace(',', '').replace('.', ''));
                         } catch (e) {
-                            console.log(e);
+                            Logger.error(e);
                         }
                     }
                     if (drawLabels && data.self.stats[i]) {
@@ -770,7 +770,7 @@ function updatePreview() {
                         resetData();
                     }
                 } catch (e) {
-                    console.log(e);
+                    Logger.error(e);
                 }
             }
             if (drawLabels) {
@@ -820,7 +820,7 @@ function updatePreview() {
 
                     //TODO
                 } catch (e) {
-                    console.log(e);
+                    Logger.error(e);
                 }
             }
             if (drawLabels) {
@@ -849,7 +849,7 @@ function updatePreview() {
                         data.performance.parts[split1[0].trim()] = split1[1].trim();
                     }
                 } catch (e) {
-                    console.log(e);
+                    Logger.error(e);
                 }
             }
         }))
@@ -876,7 +876,7 @@ function updatePreview() {
                         // resetData();
                     }
                 } catch (e) {
-                    console.log(e)
+                    Logger.error(e)
                 }
             }
             if (drawLabels) {
@@ -999,7 +999,7 @@ function updatePreview() {
                             data.allies[i].assists = Math.max(parseNumber(split[1]), data.allies[i].assists);
                             data.allies[i].deaths = Math.max(parseNumber(split[2]), data.allies[i].deaths);
                         } catch (e) {
-                            console.log(e);
+                            Logger.error(e);
                         }
                     }
 
@@ -1025,7 +1025,7 @@ function updatePreview() {
                         data.allies[i].healing = Math.max(parseNumber(split[1]), data.allies[i].healing);
                         data.allies[i].mitigated = Math.max(parseNumber(split[2]), data.allies[i].mitigated);
                     } catch (e) {
-                        console.log(e);
+                        Logger.error(e);
                     }
                 }
 
@@ -1168,7 +1168,7 @@ function updatePreview() {
                         data.enemies[i].assists = Math.max(parseNumber(split[1]), data.enemies[i].assists);
                         data.enemies[i].deaths = Math.max(parseNumber(split[2]), data.enemies[i].deaths);
                     } catch (e) {
-                        console.log(e)
+                        Logger.error(e)
                     }
                 }
                 drawLabel(`${data.enemies[i].eliminations}`, {
@@ -1360,7 +1360,7 @@ function updatePreview() {
             sound.play(startSound);
         })
         .catch(e => {
-            console.log(e);
+            Logger.error(e);
 
             winButton.disabled = false;
             drawButton.disabled = false;
@@ -1454,7 +1454,7 @@ async function writeOutput() {
             saveSession();
         }
     } catch (e) {
-        console.log(e);
+        Logger.error(e);
     }
 
     if (data.status !== 'reset') {
@@ -1465,12 +1465,12 @@ async function writeOutput() {
                 }
                 out.writeGameResult(data);
             } catch (e) {
-                console.log(e);
+                Logger.error(e);
             }
             try {
                 out.writeImage(data, images.get('resized'), canvas.toDataURL('image/png'))
             } catch (e) {
-                console.log(e);
+                Logger.error(e);
             }
         }
         sound.play(successSound);
@@ -1499,7 +1499,7 @@ async function writeOutputAndReset() {
             saveSession();
         }
     } catch (e) {
-        console.log(e);
+        Logger.error(e);
     }
 
     if (data.status !== 'reset') {
@@ -1510,12 +1510,12 @@ async function writeOutputAndReset() {
                 }
                 out.writeGameResult(data);
             } catch (e) {
-                console.log(e);
+                Logger.error(e);
             }
             try {
                 out.writeImage(data, images.get('resized'), canvas.toDataURL('image/png'))
             } catch (e) {
-                console.log(e);
+                Logger.error(e);
             }
         }
     }
@@ -1639,13 +1639,13 @@ async function debugImage(id: string, jmp: Jimp | cv.Mat) {
 }
 
 // ipcRenderer.on('screenshotContent', async (event, sourceId) => {
-//     console.log("source",sourceId)
+//     Logger.info("source",sourceId)
 //     document.getElementById('screenshotPreview').src = sourceId
 // });
 
 // let keyDown = false;
 ipcRenderer.on('getScreenshot', (event, action) => {
-    console.log(`[getScreenshot] ${action}`);
+    Logger.info(`[getScreenshot] ${action}`);
 
     // keyDown = action;
     currentDate = moment().tz(TIMEZONE).toDate();
@@ -1664,7 +1664,7 @@ ipcRenderer.on('getScreenshot', (event, action) => {
 })
 
 ipcRenderer.on('gameResult', (event, action) => {
-    console.log(`[gameResult] ${action}`);
+    Logger.info(`[gameResult] ${action}`);
 
     data.status = action;
 
@@ -1680,7 +1680,7 @@ ipcRenderer.on('gameResult', (event, action) => {
 })
 
 ipcRenderer.on('setPOTG', (event, value) => {
-    console.log(`[setPOTG] ${value}`);
+    Logger.info(`[setPOTG] ${value}`);
 
     data.self.potg = value;
     updateDataDebug();
@@ -1688,7 +1688,7 @@ ipcRenderer.on('setPOTG', (event, value) => {
 })
 
 ipcRenderer.on('setTeam', (event, value) => {
-    console.log(`[setTeam] ${value}`);
+    Logger.info(`[setTeam] ${value}`);
 
     data.self.team = value;
     updateDataDebug();
@@ -1696,7 +1696,7 @@ ipcRenderer.on('setTeam', (event, value) => {
 })
 
 ipcRenderer.on('setResultAllies', (event, value) => {
-    console.log(`[setResultAllies] ${value}`);
+    Logger.info(`[setResultAllies] ${value}`);
 
     data.match.results.allies = value;
     updateDataDebug();
@@ -1704,7 +1704,7 @@ ipcRenderer.on('setResultAllies', (event, value) => {
 })
 
 ipcRenderer.on('setResultEnemies', (event, value) => {
-    console.log(`[setResultEnemies] ${value}`);
+    Logger.info(`[setResultEnemies] ${value}`);
 
     data.match.results.enemies = value;
     updateDataDebug();
@@ -1712,13 +1712,13 @@ ipcRenderer.on('setResultEnemies', (event, value) => {
 })
 
 ipcRenderer.on('listenAllKeys', (event, value) => {
-    console.log(`[listenAllKeys] ${value}`);
+    Logger.info(`[listenAllKeys] ${value}`);
 
     value === true ? sound.play(notifyUpSound) : sound.play(notifyDownSound);
 })
 
 ipcRenderer.on('sendKeyStroke', (event, keycode, character) => {
-    // console.log(`[sendKeyStroke] keyCode: ${ keycode } | character: ${ character }`);
+    // Logger.info(`[sendKeyStroke] keyCode: ${ keycode } | character: ${ character }`);
 
     if (character === undefined) {
         character = '';
@@ -1738,7 +1738,7 @@ ipcRenderer.on('takingScreenshot', e => {
 const images = new Map<string, Jimp>();
 
 async function handleImageContent(imageType: string, jimp: Jimp, cvImg: cv.Mat) {
-    console.log("handleImageContent", imageType);
+    Logger.info("handleImageContent", imageType);
 
     screenshotStatus.textContent = "Got new screenshot";
 

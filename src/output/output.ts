@@ -9,6 +9,7 @@ import {ClientOptions} from "@influxdata/influxdb-client";
 import {GoogleSpreadsheet} from "google-spreadsheet";
 import { format, differenceInMinutes, differenceInSeconds } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Logger } from "../util";
 
 let appDataPath = '';
 
@@ -23,7 +24,7 @@ export function getDataDir() {
             fs.mkdirSync(dir, { recursive: true });
         }
     }catch (e){
-        console.log(e)
+        Logger.error(e)
     }
     return dir;
 }
@@ -67,20 +68,20 @@ export class Output {
 export class JsonOutput extends Output {
 
     writeGameResult(data: GameData) {
-        console.log(data)
+        Logger.info(data)
         const name = data.times.start.toISOString().replace(/:/g, '-') + "-" + data.status;
         const out = `./output/games/game-${name}.json`;
-        console.log(out);
+        Logger.info(out);
         JsonOutput.writeJson(`./output/games/game-${name}.json`, data);
     }
 
     writeImage(data: GameData, jmp: Jimp, canvas: string) {
         const name = data.status + "-" + data.times.start.toISOString().replace(/:/g, '-');
         const out1 = `./output/games/game-${name}.original.png`;
-        console.log(out1);
+        Logger.info(out1);
         jmp.write(out1);
         const out2 = `./output/games/game-${name}.labelled.png`;
-        console.log(out2)
+        Logger.info(out2)
         fs.writeFileSync(out2, Buffer.from(canvas.substring('data:image/png;base64,'.length), 'base64'))
     }
 
@@ -95,21 +96,21 @@ export class JsonOutput extends Output {
                 fs.copyFileSync(file, file + '.backup');
             }
         }catch (e){
-            console.log(e);
+            Logger.info(e);
         }
     }
 
     static writeJson(file: string, data: any) {
         if(!data) {
-            console.warn("not writing empty json data to ", file);
+            Logger.warning("not writing empty json data to ", file);
             return;
         }
         if(Array.isArray(data)&&data.length<=0) {
-            console.warn("not writing empty json array to ", file);
+            Logger.warning("not writing empty json array to ", file);
             return;
         }
         if(Object.keys(data).length<=0) {
-            console.warn("not writing empty json object to ", file);
+            Logger.warning("not writing empty json object to ", file);
             return;
         }
 
@@ -119,7 +120,7 @@ export class JsonOutput extends Output {
                 flag: 'w'
             });
         } catch (e) {
-            console.log(e)
+            Logger.error(e)
         }
     }
 
