@@ -150,7 +150,7 @@ const createWindow = async (): Promise<void> => {
         })
     })
 
-    ipcMain.on('initVideo', () => {
+    /* ipcMain.on('initVideo', () => {
         Logger.info("initVideo")
         desktopCapturer.getSources({types: ['screen']}).then(async sources => {
             mainWindow.webContents.send('setSource', sources[0].id);
@@ -158,7 +158,7 @@ const createWindow = async (): Promise<void> => {
                 Logger.info(source);
             }
         })
-    })
+    }) */
 
     // let keyDown = false;
 

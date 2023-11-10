@@ -24,7 +24,9 @@ import {cleanupText, getNameTransform, getRole, Logger, parseNumber, tmpImg} fro
 import * as path from "path";
 import config from "../config.json";
 import moment from 'moment-timezone';
-import sound from "sound-play";
+import sound from 'sound-play';
+import screenshot from 'screenshot-desktop';
+import fs from 'fs';
 
 Logger.info('👋 This message is being logged by "renderer.js", included via webpack');
 
@@ -36,9 +38,9 @@ ipcRenderer.on('appDataPath',(event,path)=>{
     loadSession();
 })
 
-setTimeout(() => {
+/* setTimeout(() => {
     ipcRenderer.send('initVideo');
-}, 1000);
+}, 1000); */
 // setTimeout(() => {
 //     takeScreenshot()
 // }, 1200);
@@ -73,6 +75,16 @@ Logger.info('👋 This message is being logged by "offscreen.js", included via w
 
 const video = document.querySelector('video');
 const videoCanvas = document.createElement('canvas');
+
+const staticImageCanvas = document.createElement('canvas');
+const staticImageCtx = staticImageCanvas.getContext('2d');
+const staticImg = new Image();
+let imageBuffer;
+
+staticImg.onload = function() {
+    staticImageCtx.drawImage(staticImg, 0, 0, canvas.width, canvas.height);
+};
+
 let stream: MediaStream;
 
 const selfName: string = config?.selfName || '';
@@ -325,7 +337,7 @@ async function createVideo(sourceId: string) {
 async function takeScreenshot() {
     screenshotStatus.textContent = "Taking screenshot...";
 
-    const img = await takeVideoSnapshot();
+    // const img = await takeVideoSnapshot();
 
     screenshotStatus.textContent = "Processing...";
     canvas.classList.add('processing');
@@ -337,10 +349,16 @@ async function takeScreenshot() {
         jmp = await Jimp.read(url);
         imgEl = await tmpImg(url);
     } else {
-        jmp = await Jimp.read(Buffer.from(img.substring('data:image/png;base64,'.length), 'base64'));
-        imgEl = videoCanvas;
-    }
+        // jmp = await Jimp.read(Buffer.from(img.substring('data:image/png;base64,'.length), 'base64'));
+        // imgEl = videoCanvas;
+        await screenshot({ filename: 'tmp.png' });
 
+        imageBuffer = fs.readFileSync('tmp.png');
+        staticImg.src = 'data:image/png;base64,' + imageBuffer.toString('base64');
+        
+        jmp = await Jimp.read('tmp.png');
+        imgEl = staticImg;
+    }
 
     try {
         await processScreenshot(jmp, imgEl)
@@ -373,8 +391,7 @@ async function takeVideoSnapshot(): Promise<string> {
 ipcRenderer.on('setSource', async (event, sourceId) => {
     Logger.info("[setSource]", sourceId);
 
-    createVideo(sourceId);
-    sound.play(startSound);
+    // createVideo(sourceId);
 });
 
 ipcRenderer.on('takeScreenshot', async (event) => {
@@ -413,14 +430,24 @@ async function processScreenshot(jmp: Jimp, img: HTMLElement) {
     }
 
     console.time('processScreenshot.resized');
-    const resized = await jmp.resize(Coordinates.screen.width, Coordinates.screen.height);
+    let resized = jmp;
 
-    try {
-        cv.resize(cvImg, cvResized, {width: Coordinates.screen.width, height: Coordinates.screen.height});
-    } catch (e) {
-        Logger.error(e);
-        location.reload()
+    if (jmp.bitmap.width !== Coordinates.screen.width || jmp.bitmap.height !== Coordinates.screen.height) {
+        resized = await jmp.resize(Coordinates.screen.width, Coordinates.screen.height);
     }
+
+    if (cvImg.cols !== Coordinates.screen.width || cvImg.rows !== Coordinates.screen.height) {
+        try {
+            cv.resize(cvImg, cvResized, {width: Coordinates.screen.width, height: Coordinates.screen.height});
+        } catch (e) {
+            Logger.error('Error resizing image', e);
+            location.reload()
+        }
+    }
+    else {
+        cvResized = cvImg;
+    }
+
     handleImageContent('resized', resized, cvResized)
     console.timeEnd('processScreenshot.resized')
 
@@ -430,7 +457,7 @@ async function processScreenshot(jmp: Jimp, img: HTMLElement) {
     try {
         cv.cvtColor(cvResized, cvGrayscale, cv.COLOR_RGB2GRAY);
     } catch (e) {
-        Logger.error(e);
+        Logger.error('Error converting image to grayscale', e);
         location.reload()
     }
     handleImageContent('grayscale', grayscale, cvGrayscale);
@@ -1584,32 +1611,36 @@ const lossButton = document.getElementById('lossButton') as HTMLButtonElement;
 const resetButton = document.getElementById('resetButton') as HTMLButtonElement;
 winButton.addEventListener('click', () => {
     data.status = 'win';
-    writeOutputAndReset();
+    writeOutput();
     winButton.disabled = true;
+    sound.play(setSound);
     setTimeout(() => {
         winButton.disabled = false;
     }, 1000);
 })
 drawButton.addEventListener('click', () => {
     data.status = 'draw';
-    writeOutputAndReset()
+    writeOutput();
     drawButton.disabled = true;
+    sound.play(setSound);
     setTimeout(() => {
         drawButton.disabled = false;
     }, 1000);
 })
 lossButton.addEventListener('click', () => {
     data.status = 'loss';
-    writeOutputAndReset()
+    writeOutput();
     lossButton.disabled = true;
+    sound.play(setSound);
     setTimeout(() => {
         lossButton.disabled = false;
     }, 1000);
 })
 resetButton.addEventListener('click', () => {
     data.status = 'reset';
-    writeOutputAndReset()
+    resetData();
     resetButton.disabled = true;
+    sound.play(readySound);
     setTimeout(() => {
         resetButton.disabled = false;
     }, 1000);
@@ -1776,3 +1807,4 @@ async function handleImageContent(imageType: string, jimp: Jimp, cvImg: cv.Mat) 
 
 }
 
+sound.play(startSound);

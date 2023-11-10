@@ -93,3 +93,4 @@ session.json
 currentgame.json
 output/*
 *.backup
+*.png
