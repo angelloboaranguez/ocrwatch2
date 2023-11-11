@@ -172,55 +172,55 @@ const createWindow = async (): Promise<void> => {
             // keyDown = true;
             mainWindow.webContents.send('getScreenshot', true);
         }
-        else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.W) {
+        else if (e.altKey && e.keycode === UiohookKey.W) {
             mainWindow.webContents.send('gameResult', 'win');
         }
-        else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.L) {
+        else if (e.altKey && e.keycode === UiohookKey.L) {
             mainWindow.webContents.send('gameResult', 'loss');
         }
-        else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.E) { // Result: Equals (Draw)
+        else if (e.altKey && e.keycode === UiohookKey.E) { // Result: Equals (Draw)
             mainWindow.webContents.send('gameResult', 'draw');
         }
-        else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.R) {
+        else if (e.altKey && e.keycode === UiohookKey.R) {
             mainWindow.webContents.send('gameResult', 'reset');
         }
-        else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.P) {
+        else if (e.altKey && e.keycode === UiohookKey.P) {
             mainWindow.webContents.send('setPOTG', true);
         }
-        else if (e.ctrlKey && e.altKey && e.keycode === UiohookKey.P) {
+        else if (e.ctrlKey && e.keycode === UiohookKey.P) {
             mainWindow.webContents.send('setPOTG', false);
         }
-        else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.A) {
+        else if (e.altKey && e.keycode === UiohookKey.A) {
             mainWindow.webContents.send('setTeam', 'Attacker');
         }
-        else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.D) {
+        else if (e.altKey && e.keycode === UiohookKey.D) {
             mainWindow.webContents.send('setTeam', 'Defender');
         }
-        else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.Home) {
+        else if (e.altKey && e.keycode === UiohookKey.Home) {
             listenAllKeys = true;
             mainWindow.webContents.send('listenAllKeys', listenAllKeys);
         }
-        else if (e.ctrlKey && e.shiftKey && e.keycode === UiohookKey.End) {
+        else if (e.altKey && e.keycode === UiohookKey.End) {
             listenAllKeys = false;
             mainWindow.webContents.send('listenAllKeys', listenAllKeys);
         }
         // Set Allies Result
-        else if (e.ctrlKey && e.shiftKey && (e.keycode === UiohookKey[0] || e.keycode === UiohookKey.Numpad0)) {
+        else if (e.ctrlKey && (e.keycode === UiohookKey[0] || e.keycode === UiohookKey.Numpad0)) {
             mainWindow.webContents.send('setResultAllies', 0);
         }
-        else if (e.ctrlKey && e.shiftKey && (e.keycode === UiohookKey[1] || e.keycode === UiohookKey.Numpad1)) {
+        else if (e.ctrlKey && (e.keycode === UiohookKey[1] || e.keycode === UiohookKey.Numpad1)) {
             mainWindow.webContents.send('setResultAllies', 1);
         }
-        else if (e.ctrlKey && e.shiftKey && (e.keycode === UiohookKey[2] || e.keycode === UiohookKey.Numpad2)) {
+        else if (e.ctrlKey && (e.keycode === UiohookKey[2] || e.keycode === UiohookKey.Numpad2)) {
             mainWindow.webContents.send('setResultAllies', 2);
         }
-        else if (e.ctrlKey && e.shiftKey && (e.keycode === UiohookKey[3] || e.keycode === UiohookKey.Numpad3)) {
+        else if (e.ctrlKey && (e.keycode === UiohookKey[3] || e.keycode === UiohookKey.Numpad3)) {
             mainWindow.webContents.send('setResultAllies', 3);
         }
-        else if (e.ctrlKey && e.shiftKey && (e.keycode === UiohookKey[4] || e.keycode === UiohookKey.Numpad4)) {
+        else if (e.ctrlKey && (e.keycode === UiohookKey[4] || e.keycode === UiohookKey.Numpad4)) {
             mainWindow.webContents.send('setResultAllies', 4);
         }
-        else if (e.ctrlKey && e.shiftKey && (e.keycode === UiohookKey[5] || e.keycode === UiohookKey.Numpad5)) {
+        else if (e.ctrlKey && (e.keycode === UiohookKey[5] || e.keycode === UiohookKey.Numpad5)) {
             mainWindow.webContents.send('setResultAllies', 5);
         }
         // Set Enemies Result
